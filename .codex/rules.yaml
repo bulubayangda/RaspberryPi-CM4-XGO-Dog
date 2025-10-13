@@ -1,0 +1,140 @@
+version: 1
+project: XGO RaspberryPi-CM4
+maintainer: Codex CLI
+rules:
+  - id: communication
+    title: 交流语言规范
+    scope:
+      languages: ["*"]
+    directives:
+      - "与用户互动时始终使用中文回复，除非用户明确要求其他语言。"
+  - id: container-workflow
+    title: 容器开发流程
+    scope:
+      files: [".devcontainer/**/*", "Dockerfile", "**/*.sh", "**/*.md"]
+    directives:
+      - "修改 Dockerfile 或 devcontainer 配置前，确认镜像源可用、网络策略允许，必要时同步更新 README。"
+      - "容器内操作需优先使用已安装依赖，若需新增包，写入 Dockerfile 并注明用途，避免临时安装。"
+      - "挂载本地资源（如 `xgoMusic`、`xgoPictures`、`xgoVideos`）时保持读写一致性，确保容器用户 `pi` 拥有访问权限。"
+      - "涉及设备映射（串口 `/dev/ttyAMA0`、摄像头 `/dev/video*` 等）需在 devcontainer.json 中显式声明，并在文档中提醒使用者。"
+      - "在容器内运行需要 sudo 的命令时，确认基础镜像已配置 sudo 权限，或在脚本中加入权限校验。"
+  - id: coding-style
+    title: 编码风格与格式
+    scope:
+      languages: ["python", "bash", "yaml", "json"]
+    directives:
+      - "Python 代码遵循 PEP 8 与项目现有风格，保持 4 空格缩进，函数/变量命名使用小写下划线。"
+      - "Shell 脚本尽量使用 `set -euo pipefail`，命令行参数需做基本校验。"
+      - "配置文件与 YAML 保持键名小写、缩进对齐，禁止混用制表符。"
+      - "新增依赖前确认容器镜像可安装，必要时更新文档。"
+  - id: comments-docs
+    title: 注释与文档
+    scope:
+      files: ["**/*.py", "**/*.sh", "docs/**/*.md"]
+    directives:
+      - "核心逻辑、硬件交互、系统命令必须配备中文注释或文档说明。"
+      - "函数/类需在首行 docstring 中说明用途、重要参数与返回值。"
+      - "更新行为需同步维护 `docs/project_overview.md` 或相关文档，确保结构图示及时刷新。"
+  - id: debugging-testing
+    title: 调试与测试
+    scope:
+      files: ["RaspberryPi-CM4-main/**/*.py", "demos/**/*.py"]
+    directives:
+      - "新增模块需提供最小可行的本地测试方法（脚本入口或说明），避免直接在主程序上试错。"
+      - "涉及硬件操作的调试输出应通过日志模块输出，并在发布前可控关闭。"
+      - "禁止在仓库中保留临时调试代码（如 `print`、`pdb.set_trace()`），提交前需清理。"
+  - id: logging
+    title: 日志与异常
+    scope:
+      files: ["**/*.py"]
+    directives:
+      - "统一使用 `logging` 模块或既有日志封装输出关键事件，避免大量裸 `print`。"
+      - "日志等级遵循 DEBUG/INFO/WARNING/ERROR，硬件异常需至少 WARNING。"
+      - "捕获异常时记录上下文并做最小化恢复，必要时提示用户手动处理。"
+  - id: python-structure
+    title: Python 模块结构维护
+    scope:
+      languages: ["python"]
+    directives:
+      - "保持现有模块拆分与命名，复用 `demos/uiutils.py`、`demos/robot.py` 等基础工具。"
+      - "避免在循环内重复实例化重型对象（如 LCD、XGO、字体缓存）。"
+      - "新增脚本必须在 `demoen.py` 的 `MENU_ITEMS` 中登记后再调用。"
+  - id: xgolib-control
+    title: XGO 机器人控制
+    scope:
+      files: ["RaspberryPi-CM4-main/**/*.py"]
+    directives:
+      - "统一通过 `xgolib.XGO(port=\"/dev/ttyAMA0\")` 控制机器人，复用共享的 `dog` 实例。"
+      - "调用动作前确保串口权限已通过 `chmod` 设定，不在子线程重复创建 XGO 对象。"
+      - "动作执行完应考虑冷却或延时，避免指令堆叠。"
+  - id: gpio-buttons
+    title: GPIO 按键处理
+    scope:
+      files: ["**/uiutils.py", "**/robot.py", "**/key.py"]
+    directives:
+      - "始终使用 BCM 编码和上拉输入配置。"
+      - "按键读取采用阻塞轮询结合 `time.sleep(0.02)` 消抖。"
+      - "退出路径需释放相关资源或复用既有 `Button` 类。"
+  - id: lcd-rendering
+    title: LCD 显示规范
+    scope:
+      files: ["**/uiutils.py", "**/robot.py", "**/*.py"]
+    directives:
+      - "使用 `xgoscreen.LCD_2inch` 初始化后再绘制，刷新界面统一调用 `display.ShowImage`。"
+      - "字体通过缓存的 `ImageFont.truetype` 加载，避免重复打开字体文件。"
+      - "新增界面元素使用现有 `lcd_rect`、`lcd_draw_string`、`display_cjk_string` 等辅助函数。"
+  - id: cv-stack
+    title: 视觉处理栈
+    scope:
+      files: ["**/face_*.py", "**/hands.py", "**/color.py", "**/follow_line.py", "**/ball.py"]
+    directives:
+      - "摄像头分辨率保持 320x240，必要时调用 `cap.set(3, 320)` 与 `cap.set(4, 240)`。"
+      - "在显示前注意 BGR/RGB 转换，退出分支释放摄像头与窗口。"
+      - "使用 NumPy/Mediapipe 时确保处理过程具备异常捕获与性能监控。"
+  - id: audio-stack
+    title: 语音/智能体管线
+    scope:
+      files: ["**/speech/**/*.py", "**/xiaozhi_test/**/*.py"]
+    directives:
+      - "PyAudio 统一使用 16kHz 单声道配置，并在程序退出时关闭 `stream` 与 `PyAudio` 实例。"
+      - "调用 libnyumaya/LLM 接口前先检测网络连通性，失败时给出用户提示。"
+      - "重复使用的音频资源、模型路径存放在固定目录，避免硬编码散落。"
+  - id: network-system
+    title: 网络与系统命令
+    scope:
+      files: ["**/hotspot.py", "**/network.py", "**/wifi_set.py", "**/volume.py"]
+    directives:
+      - "执行 `nmcli`、`wpa_cli`、`pactl` 等命令需确保 `sudo` 权限并处理返回值。"
+      - "更新配置文件后及时刷新 LCD 提示，给予系统足够响应时间。"
+      - "错误场景要回滚或提示用户手动恢复。"
+  - id: config-files
+    title: 配置文件管理
+    scope:
+      files: ["**/language/**", "**/volume/**", "**/*.ini", "**/*.la"]
+    directives:
+      - "读取配置后需 `strip()` 并清理控制字符，写入时保持原格式与编码。"
+      - "修改语言、音量等关键配置后，如需重启主程序，应通过已存在的重启逻辑实现。"
+  - id: web-frontend
+    title: Web 控制前端
+    scope:
+      files: ["flacksocket/templates/**/*.html", "flacksocket/static/**/*"]
+    directives:
+      - "Socket 事件命名遵循现有规范（全小写、含义明确），同时兼容鼠标与触摸事件。"
+      - "前端样式优先复用 `console.css`，新增元素保持响应式布局。"
+      - "对接后端接口前确认 `socketio` 已更新 `last_access_time`，避免超时断开。"
+  - id: subprocess
+    title: 外部脚本调用
+    scope:
+      files: ["main.py", "demoen.py", "**/*.py"]
+    directives:
+      - "使用 `os.system` 或 `subprocess` 时沿用现有封装模式，并保证 Demo 提供退出路径。"
+      - "调用外部可执行前检查依赖是否存在，必要时提示用户安装。"
+      - "结束 Demo 时记得恢复主界面并重绘菜单。"
+  - id: resources
+    title: 静态资源组织
+    scope:
+      files: ["pics/**/*", "demos/expression/**/*", "xgoMusic/**/*", "xgoPictures/**/*", "xgoVideos/**/*"]
+    directives:
+      - "新增资源文件统一放入对应目录，命名使用小写+下划线，便于在代码中引用。"
+      - "引用路径以 `/home/pi/RaspberryPi-CM4-main/` 为基准，或通过 `os.path.join` 组合。"
+      - "大体量资源需在文档中说明用途，避免冗余堆积。"

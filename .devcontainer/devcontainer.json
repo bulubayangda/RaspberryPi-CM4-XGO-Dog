@@ -1,0 +1,49 @@
+{
+  "name": "RaspberryPi-CM4-XGO-Dog",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": "..",
+    "args": {
+      "PYTHON_VERSION": "3.10",
+      "USERNAME": "dev",
+      "USER_UID": "1000",
+      "USER_GID": "1000"
+    }
+  },
+  "remoteUser": "dev",
+  "workspaceFolder": "/workspace",
+  "runArgs": [
+    "--init",
+    "--privileged",
+    "--group-add",
+    "audio",
+    "--group-add",
+    "video"
+  ],
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
+  ],
+  "forwardPorts": [
+    80,
+    5001
+  ],
+  "postCreateCommand": "install-xgo-extras || true",
+  "features": {},
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.formatting.provider": "black",
+        "editor.formatOnSave": true,
+        "terminal.integrated.defaultProfile.linux": "bash"
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-toolsai.jupyter",
+        "njpwerner.autodocstring",
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  }
+}
